@@ -484,6 +484,402 @@ mysql
 							12.where 过滤条件的顺序会影响sql的执行顺序吗?
 
 
+表数据删除，表文件大小不变
+
+			1.存放原理
+				1.innodb_file_per_table 
+					1. OFF 表示的是，表的数据放在系统共享表空间，也就是跟数据字典放
+					2. ON 表示的是，每个 InnoDB 表数据存储在一个以 .ibd 为后缀的文件。drop table 命令，系统就会直 接删除这个文件。而如果是放在共享表空间中，即使表删掉了，空间也是不会回收的。
+				2.删除只是标记为删除，如果插入对应区间数据则复用；对于页，是不分区间的重新复用
+
+
+			2.空洞
+				1.删除
+				2.插入：数据是按照索引递增顺序插入的，那么索引是紧凑的。但如果数据是随机插入的，就可 能造成索引的数据页分裂。
+						300 - 500 - 600 为一页 ； 插入550时，则需要重新申请页，即300-500 / 550-600 数据移动
+				3.更新索引上的值，可以理解为删除一个旧的值，再插入一个新值。不难理解，这也是 会造成空洞的。\
+
+			3.解决
+				1.重建表
+						1. alter table A engine=InnoDB 命令来重建表。 MySQL 会自动完成转存数据、交换表名、删除旧表的操作
+						   按照索引顺序进行重新顺序插入，减少空洞
+						2.在整个 DDL 过程中，表 A 中不能有更新。也 就是说，这个 DDL 不是 Online 的。
+						   MySQL 5.6 版本开始引入的 Online DDL，对这个操作流程做了优化
+						3.通过在ddl时，记录row log来完成新的更新记录
+
+						4.几种方式对比
+							optimize table、analyze table 和 alter table 这三种方式重建表
+							从 MySQL 5.6 版本开始，alter table t engine = InnoDB（也就是 recreate）默认的就 tmp_file
+							analyze table t 其实不是重建表，只是对表的索引信息做重新统计，没有修改数据，这 个过程中加了 MDL 读锁；
+							optimize table t 等于 recreate+analyze。
+
+
+				2.在线DDL对锁的使用
+						1.alter 语句在启动的时候需要获取 MDL 写锁，但是这个写锁在真正 拷贝数据之前就退化成读锁了。
+							为什么要退化呢？为了实现 Online，MDL 读锁不会阻塞增删改操作。
+
+						2.那为什么不干脆直接解锁呢？为了保护自己，禁止其他线程对这个表同时做 DDL。
+
+						3.Online DDL 耗时的过程就是拷贝数据到临时表的过程，这个步骤 的执行期间可以接受增删改操作。所以，相对于整个 DDL 过程来说，锁的时间非常短。对 业务来说，就可以认为是 Online 的
+						
+						4.为何不直接就加个MDL读锁 ,这样DDL 也执行不了,应用redo 替换文件后释放读锁即可 。
+						 如果有别的线程正在读这个表的数据，得等下。所以存在 降级现象
+
+
+						4.消耗 IO 和 CPU 资源 ===>  GitHub 开源的 gh-ost
+						5.从server层 - innodb引擎层
+				
+				问题：如果你有一个 1TB 的表，现在磁盘间是 1.2TB，能不能做一个 inplace 的 DDL 呢？
+						答案是不能。因为，tmp_file 也是要占用临时空间的。
+
+		
+		count(*)操作
+
+				1.为什么 InnoDB 不跟 MyISAM 一样，也把数字存起来呢？直接返回呢？
+					InnoDB 的事务设计有关系，可重复读是它默认的隔离级别，在代码上就是通过多版 本并发控制，也就是 MVCC 来实现的。每一行记录都要判断自己是否对这个会话可见，因 此对于 count(*) 请求来说，InnoDB 只好把数据一行一行地读出依次判断，可见的行才能 够用于计算“基于这个查询”的表的总行数。
+
+						优化一：InnoDB 是索引组织表，主键索引树的叶子节点是数据，而普通索引树的叶子节 点是主键值。所以，普通索引树比主键索引树小很多。对于 count(*) 这样的操作，遍历哪 个索引树得到的结果逻辑上都是一样的。因此，MySQL 优化器会找到小的那棵树来遍 历。在保证逻辑正确的前提下，尽量减少扫描的数据量，是数据库系统设计的通用法则之 一。
+
+
+				2.如果需要实时页面展示数量？ 这种对实时的count(*)性能消耗大
+						1.用缓存系统保存计数
+								1.内存易丢失  --> redis的保存机制如何处理？
+								2.即使 Redis 正常工作，这个计数值还是逻辑上不精确的。计数和插入两个线程
+
+						2.使用一张计数表
+								1.解决了已丢失 InnoDB 是支持崩溃恢复不丢数据的
+								2.事务解决计数不精确问题
+										1.事务A 计数表+1，insert一条数据，事务B查询count,limit 100; 事务A commit;
+										2.根据事务，事务B看不到事务A的+1；所以逻辑上就是当前的数量，当前的100；
+										  所以说是一致的。
+										3.肯定不可能实现完全实时。
+					==> 计数放在 Redis 里面，不能够保证计数和 MySQL 表里的数据精确一致的原因， 是这两个不同的存储构成的系统，不支持分布式事务，无法拿到精确一致的视图
+
+				3.不同count()操作性能对比 count(字段) - 不准确<count(主键 id)<count(1)≈count(*)
+						1.innodb引擎返回，在server层进行添加计数
+
+		orderby
+				1.流程
+						1.sort_buffer_size，就是 MySQL 为排序开辟的内存（sort_buffer）的大小。如果要排序的 数据量小于 sort_buffer_size，排序就在内存中完成。但如果排序数据量太大，内存放不 下，则不得不利用磁盘临时文件辅助排序。
+						  查看参数：number_of_tmp_files 
+
+						2.排序的单行长度太大会怎么做？
+								1.SET max_length_for_sort_data = 16;
+								2.新的算法放入 sort_buffer 的字段，只有要排序的列（即 name 字段）和主键 id。
+							    3.拿得到的id回表查询数据
+
+						3.对于1/2 优先使用内存=全字段排序，减少2的磁盘操作
+				2.优化：
+						1.创建一个 city 和 name 的联合索引 
+						alter table t add index city_user(city, name) where条件和order排序字段 。 
+						这样的话就有一个聚合索引(city,name)对应具体的主键，所以操作的时候name就本身就是有序的。
+						上面排序需要特殊操作是因为取出数据对于name是无序的。所以这样的explain就没有using filesort 
+
+						2.覆盖索引是指，索引上的信息足够满足查询请求，不需要再 回到主键索引上去取数据。
+							 alter table t add index city_user_age(city, name, age)
+							 explain Using index，表示的就是使用了覆盖索引
+
+				这里并不是说要为了每个查询能用上覆盖索引，就要把语句中涉及的字段都建上联合 索引，毕竟索引还是有维护代价的。这是一个需要权衡的决定。
+
+		
+
+		基于数据库数据随机显示 == 随机排序
+						1.select word from words order by rand() limit 3;
+						2.explain:	Extra 字段显示 Using temporary，表示的是需要使用临时表；Using filesort，表示的是 需要执行排序操作。
+						3.order by rand() 
+								1.内存临时表，内存临时表排序的时候,因为不需要读取磁盘直接读取内存所以
+						  			无需考虑读取性能影响，直接考虑减少行排序数据为准。 使用了 rowid 排序方法。
+						  		2.磁盘临时表	tmp_table_size 这个配置限制了内存临时表的大小，默认值是 16M
+						  		3.MySQL 5.6 版本引入的一个新的排 序算法。为什么没有使用临时文件的算法，也 就是归并排序算法，而是采用了优先队列排序算法。
+						  				1.取前三行作为初始化值(R,rowId) 固定的数组或者堆
+						  				2.遍历比较，如果大于则更改覆盖
+						  				3.这样话就避免了其他没有用的排序，只需要维护需要返回的几条就可以了
+
+						  	问题：select city,name,age from t where city='杭州' order by name limit 1000  ;
+						  	      为什么没有使用上面的优先队列算法？
+						  	      (name,rowid)，超过了我设置的 sort_buffer_size 大小，所以只能使用归并排序算法。
+
+						  	    ===> 从不同维度动态调整算法 <===
+						4.随机排序法  rand()计算过程复杂 
+								1. 取得这个表的主键 id 的最大值 M 和最小值 N; 
+								2. 用随机函数生成一个最大值到最小值之间的数 X = (M-N)*rand() + N; 
+								3. 取不小于 X 的第一个 ID 的行。
+
+								=====
+								mysql> select max(id),min(id) into @M,@N from t ; 
+								set @X= floor((@M-@N+1)*rand() + @N); 
+								select * from t where id >= @X limit 1;
+								=====
+
+								因为取 max(id) 和 min(id) 都是不需要扫描索引的，而第三步的 select 也可以用索引快速定位，可以认为就只扫描了 3 行。
+
+								这个算法本身并不 严格满足题目的随机要求，因为 ID 中间可能有空洞，因此选择不同行的概率不一样，不是 真正的随机。这四行的 id 分别是 1、2、40000、40001 取40000的概率就太大了。就是bug了。
+
+								===优化随机性===
+								1. 取得整个表的行数，并记为 C。 
+								2. 取得 Y = floor(C * rand())。 floor 函数在这里的作用，就是取整数部分。 
+								3. 再用 limit Y,1 取得一行   
+								4. 扫描C+Y+1 行，执行代价比随机算法 1 的代价要高。
+
+								===优化取值====
+								问题：对于取多个值扫描; C+(Y1+1)+(Y2+1)+(Y3+1)，
+								假设Y1，Y2，Y3是由小到大的三个数，则可以优化成这样，这样扫描行数为
+								Y3 id1 = select * from t limit @Y1，1； 
+								id2= select * from t where id > id1 limit @Y2-@Y1，1； 
+								select * from t where id > id2 limit @Y3 - @Y2，1； 
+								直接定位来减少扫描
+						5.随机其他思路  业务开发复杂性综合考虑
+								1.k缓存或者redis缓存。由于需要随机 访问，数组比较好。假如一个单词平均10个字节，10*10000，不到1M就装下了
+								2.数据库来做，上面方案空洞的问题，如果单词库不变，可以在上 线前整理数据，把空洞处理调。比如：原来单词存在A表，新建B表 ，执行 insert into B(word) select word from A. B的id是自增的，就会生成连续的主键
+
+			为什么这些SQL语句逻辑相同，性能却差异巨大
+
+						1.条件字段函数操作		
+								1.对索引字段做函数操作，可能会破坏索引值的有序性，因此优化器就决定放弃走 树搜索功能。
+								  函数处理后的值无法运用原来的索引树
+								2.虽然explain中索引走的是对应字段，但改字段是遍历处理的，没有使用多叉树直接定位 从
+								  扫描row可以看到
+
+								优化  从select count(*) from tradelog where month(t_modified)=7; 
+														|
+										1. select count(*) from tradelog where    -> (t_modified >= '2016-7-1' and t_modified<'2016-8-1') or    -> (t_modified >= '2017-7-1' and t_modified<'2017-8-1') or     -> (t_modified >= '2018-7-1' and t_modified<'2018-8-1');
+								3.select * from tradelog where id + 1 = 10000 
+										==> where id = 10000 -1 
+
+
+						2.隐式类型转换
+
+								1.如果类型不一致则将string转换int
+									相当于mysql帮你做了select * from tradelog where  CAST(tradid AS signed int) = 110717;
+									即对索引做了函数操作
+
+						3.隐式字符编码转换
+								1.字符集不同，不使用索引
+									CONVERT() 函数，在这里的意思是把输入的字符串转成 utf8mb4 字符集
+									 CONVERT 函数是加在输入参数上的，可以使用索引
+
+						索引字段不能进行函数操作，但是索引字段的参数可以玩函数
+						
+			
+			为什么我只查一行的语句，也执行这么慢
+						1.查询长时间不返回    
+								1.show processlist 查看状态
+								2.等 MDL 锁 Waiting for table metadata lock 
+								3.现在有一个线程正在表 t 上请求或者持有 MDL 写锁，把 select 语句堵住了。
+								4.select blocking_pid from sys.schema_table_lock_wait 查看阻塞id
+								5.kill <=== mysql如何kill呢？
+						2. Waiting for table flush
+						3. 等行锁
+								1. select * from t sys.innodb_lock_waits where locked_table=`'test'.'t'`\G
+								2.KILL 4 才有效，也就是说直接断开这个连接。这里隐含的一个逻辑就是，连接被 断开的时候，会自动回滚这个连接里面正在执行的线程，也就释放了 id=1 上的行锁
+
+						4.查询慢
+								1.A:开始事务 - Bupdate +1 100w次 - A select id = 1 - A select id =1 lock in share mode
+								2.结果A1查到：1 A2查到100001；为什么A1比A2慢呢？A2不是都加了锁么？
+
+							==>带 lock in share mode 的 SQL 语句，是当前读，因此会直接读到 1000001 这个结果，所 以速度很快；而 select * from t where id=1 这个语句，是一致性读，因此需要从 1000001 开始，依次执行 undo log，执行了 100 万次以后，判断和当前事务关系是否可见 。才将 1 这个结果返回。
+
+
+			幻读是什么，幻读有什么问题
+						1.A: 开启事务 - 	select *from t where d =5 for update（q1）;						 q2				q3
+					      B:												update set d=5 where id = 0;
+					      C:																				insert..
+					    过程：
+					    		1. Q1 只返回 id=5 这一行； 
+					    		2. 在 T2 时刻，session B 把 id=0 这一行的 d 值改成了 5，因此 T3 时刻 Q2 查出来的是 id=0 和 id=5 这两行； 
+					    		3. 在 T4 时刻，session C 又插入一行（1,1,5），因此 T5 时刻 Q3 查出来的是 id=0、 id=1 和 id=5 的这三行。
+
+
+					    解释：
+					    		1. 在可重复读隔离级别下，普通的查询是快照读，是不会看到别的事务插入的数据的。因 此，幻读在“当前读”下才会出现。 === for update使其成为了当前读 == 读到所有 已经提交的记录的新值
+					    		2. 上面 session B 的修改结果，被 session A 之后的 select 语句用“当前读”看到，不能 称为幻读。 ===  幻读仅专指“新插入的行”。
+
+
+==20
+
+
+
+
+
+
+=================从后往前
+
+				要不要使用分区
+						1.CREATE TABLE `t` (  `ftime` datetime NOT NULL,  `c` int(11) DEFAULT NULL,  KEY (`ftime`) ) ENGINE=InnoDB DEFAULT CHARSET=latin1 PARTITION BY RANGE (YEAR(ftime))
+						(PARTITION p_2017 VALUES LESS THAN (2017) ENGINE = InnoDB, PARTITION p_2018 VALUES LESS THAN (2018) ENGINE = InnoDB, PARTITION p_2019 VALUES LESS THAN (2019) ENGINE = InnoDB, PARTITION p_others VALUES LESS THAN MAXVALUE ENGINE = InnoDB); insert into t values('2017-4-1',1),('2018-4-1',1);
+						对于引擎层来说，这是 4 个表；
+						对于 Server 层来说，这是 1 个表。
+						一个.frm 文件和 4 个.ibd 
+
+						2.间隙锁
+							1.
+
+
+
+
+
+
+
+
+
+			===44章：问题解答
+
+				自增id用完怎么办？
+						1.row_id:对于没有指定主键的表，则默认row_id,且如果用完后，不会报冲突而是覆盖。所以还是定义主键，报错比数据丢失(可靠性)要好
+						2.xid:事务id global_query_id， MySQL 重启之后会重新生成新的 binlog 文件，这就保证了，同一个 binlog 文件 里，Xid 一定是惟一的。
+						   一种极端情况：一个binlog中用完了所有的xid,重0开始，导致问题。这个值是2^64。理论上
+						3.Innodb trx_id
+							 1.Xid 是由 server 层维护的。InnoDB 内部使用 Xid，就是为了能够在 InnoDB 事务和 server 之间做关联。但是，InnoDB 自己的 trx_id，是另外维护的
+							 2.trx_id :判断这个数据是否可见的方法，就是通过事务的一致性视图与这行数据的 trx_id 做对比。
+							   可以通过 information_schema.innodb_trx 查看
+							 3.对于只读事务，该值默认都是0，但显示会很大。对于select..for update /update操作才会申请对应
+							   id。不显示0而显示一个很大的值，是因为该值由事务指针地址转换而来，便于链路查看。如果是0就无法
+							 4.并不是完全—+1，因为会涉及内部比如级联索引更新、删除旧数据打标等
+							 5.max_trx_id 会持久化存储，重启也不会重置为 0，理论上如果用完会出现脏读 <== bug
+						4.thread_id
+
+
+
+
+
+				主键作为外键如何刷新？
+						1.尽量不要修改原来关联的id
+						2.修改类型，关联表的类型也需要修改
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.对于数据库优化，其实许多不同的方案之间是如何对比性能呢？实验？
+2.如何使用性能工具或者指标定位性能问题点？ioutil（IO 利用率）? jvm各个指标查看 ? 如何符合起来分析？运行时？
+3.多少数据量算大表
+4.学完mysql后,函数转换excel + sql语句的准确性<书籍：xxxx>/sql语句规范 + explain xx + 建表规范 + mysql 
+5.边界、异常、统一模型解决方案 === 
+  学习过程中喜欢的就是这种交叉的瞬间。交叉多了，就形成了网络。 而有了网络以后，吸收新知识的速度就很快了。
+6.如果我们懂得一些参数，并可以理解这些参数，就可以做正确的设置了。而如果我们 进一步地懂得一些原理，就可以更巧妙地解决问题了
+  <== 源码逻辑 == 本质
+
+
+
+
+
+explain 的结果里 面第二行的 key=NULL 表示的就是，这个过程是通过遍历主键索引的方式，一个一个地 判断 tradeid 的值是否匹配。
+
+全表扫描默认是值“扫瞄主键索引
+
+		
+
+
+
+
+
+
+
+
+		
+
+
+
+
+
+问题：
+		1.多版本并发控制（MVCC）
+		2.changebuffer和redolog区别，binlog,undolog
+
+			详见：《15丨答疑文章（一）：日志和索引相关问题》
+
+				1.binlog（归档日志）和 redo log（重做日志）配合崩溃恢复的时候，用的是反证法，说明 了如果没有两阶段提交，会导致 MySQL 出现主备数据不一致等问题。
+
+				2.在两阶段提交的不同瞬间，MySQL 如果发生异常重启， 是怎么保证数据完整性的？
+
+					1.是写入 redo log 处于 prepare 阶段之后、写 binlog 之 前，发生了崩溃（crash），由于此时 binlog 还没写，redo log 也还没提交，所以崩溃恢 复的时候，这个事务会回滚。这时候，binlog 还没写，所以也不会传到备库
+					2.是 binlog 写完，redo log 还没 commit 前发生 crash
+							1. 如果 redo log 里面的事务是完整的，也就是已经有了 commit 标识，则直接提交； 
+							2. 如果 redo log 里面的事务只有完整的 prepare，则判断对应的事务 binlog 是否存在并 完整：
+								 a. 如果是，则提交事务； b. 否则，回滚事务。
+				问题：MySQL 怎么知道 binlog 是完整的?
+							1.格式statement 格式的 binlog，后会有 COMMIT；
+								row 格式的 binlog，后会有一个 XID event。
+							2. MySQL 5.6.2 版本以后，还引入了 binlog-checksum 参数，用来验证 binlog 内容的正确性。对于 binlog 日志由于磁盘原因，可能会在日志中间出错的情况，MySQL 可以通过校验 checksum 的结果来发现。
+
+				3.redo log 和 binlog 是怎么关联起来的?
+					1.它们有一个共同的数据字段，叫 XID。崩溃恢复的时候，会按顺序扫描 redo log
+					2.如果碰到既有 prepare、又有 commit 的 redo log，就直接提交；
+						如果碰到只有 parepare、而没有 commit 的 redo log，就拿着 XID 去 binlog 找对应 的事务
+				
+				4.......
+
+
+
+
+
+
+
+
+
+
+		3.事务在mvcc中使用，和独写锁的读写
+		4.不一致问题场景：
+				1.主从不一致
+				2.
+
+
+
+完整的构建表要有描述/引擎/字符集/表空间/主键/索引/扩展字段/只读
+ CREATE TABLE `tradelog` (  `id` int(11) NOT NULL,  `tradeid` varchar(32) DEFAULT NULL,  `operator` int(11) DEFAULT NULL,  `t_modified` datetime DEFAULT NULL,  PRIMARY KEY (`id`),  KEY `tradeid` (`tradeid`),  KEY `t_modified` (`t_modified`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+select count(*) from tradelog where month(t_modified)=7; 而不是使用截取。直接函数。
+
+
+
+
+show table status 命令显示的行数也不能直接使用。估算采样来的
+
+
+因为不论是在事务支持、并发能 力还是在数据安全方面，InnoDB 都优于 MyISAM
+
+构建全文索引：alter table t add FULLTEXT(field_name) 但会阻塞增删改操作，是非 Online 的。
+
+如果一个高配的机器，redo log 设置太小，会发生 什么情况。
+	redo log写满后，停止update;推进对应的checkpoint;现象就是磁盘压力很小，但是数据库出现间歇性的性能下跌。
+
+下分布式ID（雪花算法生成的ID）生成的索引会比自增长的ID性能低吗？
+	性能一样的，没有一定要“连续”，只要是递增
+
+
+最优的动态平衡
+
+
+
+
+
+
+================jvm对内存、磁盘管理、加载....
 
 
 
