@@ -1,0 +1,23 @@
+kafkaSource
+0.架构:   https://www.processon.com/view/5fff01bb6376897ae0b610ff#map
+1.与其他mq对比：
+1.如何和zookeeper结合，完成了哪些      https://www.processon.com/view/5f1fd7d5e401fd181aded65a
+2.高吞吐体现在哪里
+3.分区 - 同步
+4.选举
+5.幂等
+6.代码上如何做到高效对接
+7.
+
+6.Kafka【入门】就这一篇！ https://www.wmyskxz.com/2019/07/17/kafka-ru-men-jiu-zhe-yi-pian/ + kafka源码整理以及笔记整理 == 解决方案
+                        1.kafka 后台命令登录和topic查看，而不是完全依赖前台  判断是否有消息阻塞
+                        2.Kafka运维填坑 ：https://www.jianshu.com/p/d2cbaae38014
+                        3.kafka书籍：http://kafkadoc.beanmr.com/020_api/01_api_cn.html#highlevelconsumerapi
+                        4.Kafka导致重复消费原因和解决方案 ： https://segmentfault.com/a/1190000023282843
+                        5.消息回溯 
+
+0.代码剖析
+    1.
+    2.
+
+
