@@ -17,15 +17,17 @@ menu list
 
         1.注意每个文章中的todo
 
-
-        1.软件设计      softDesign           《参考自：134-软件设计之美》 
-        2.检索技术      searchTech           《参考自：123-检索技术核心》
-        3.数据库技术     mysqlTech            《参考自：mysql》 
-	4.kafka技术     kafkaTech  	  《参考自：46-kafka核心技术和实践》 《126-kafka核心源码解析》
-	5.zookeeper技术 zookeeperTech
-	
-	5.大数据处理技术   bigDataTech       《36-大规模数据处理》
-	
+        1.软件设计      softDesign            《134-软件设计之美》 
+        2.检索技术      searchTech            《123-检索技术核心》
+        3.数据库技术     mysqlTech            《mysql》 
+	4.kafka技术     kafkaTech  	    《46-kafka核心技术和实践》 《126-kafka核心源码解析》
+	5.zookeeper技术 zookeeperTech         《84-zookeeper实战和源码解析》 
+	6.流处理          streamTech          《134-软件设计之美》+ 《》
+	7.大数据处理技术   bigDataTech         《36-大规模数据处理实战》 
+	8.加速技术  redis-netty
+	9.并发实战技术  
+	10.jvm技术  
+	11.springcloud/dubbo
 	
 	
 
