@@ -25,7 +25,8 @@ menu list
 	6.流处理          streamTech          《134-软件设计之美》+ 《》
 	7.大数据处理技术   bigDataTech         《36-大规模数据处理实战》 
 	8.加速技术  redis-netty
-	9.并发实战技术  
+	9.并发实战技术   
+	10.性能测试
 	10.jvm技术  
 	11.springcloud/dubbo
 	
