@@ -24,7 +24,9 @@ menu list
 	5.zookeeper技术 zookeeperTech         《84-zookeeper实战和源码解析》 
 	6.流处理          streamTech          《134-软件设计之美》+ 《》
 	7.大数据处理技术   bigDataTech         《36-大规模数据处理实战》 
-	8.加速技术  redis-netty -es
+	8.加速技术 	     redisTech		  《146-redis核心技术和实战》
+			nettyTech
+			esTech
 	9.并发实战技术   
 	10.性能测试
 	10.jvm技术  
