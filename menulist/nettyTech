@@ -1,0 +1,409 @@
+Netty
+        1.是什么
+                1.网络通信框架
+                2.特别在分布式下对网络的要求，对高性能
+                3.异步、事件驱动
+                4.2004年开发
+
+                1.HTTP服务器之所以称为HTTP服务器，是因为编码解码协议是HTTP协议，如果协议是Redis协议，那它就成了Redis服务器
+                  使用Netty你就可以定制编解码协议，实现自己的特定协议的服务器。
+                2.使用httpclient是在http协议基础上的工具。
+
+                1.与网络有关的操作
+                https://www.zhihu.com/question/24322387
+
+                tcp自己使用netty封装和直接使用http关系?
+                  httpclient : 将发送模拟成浏览器环境进行发送接受返回
+                  netty     ： 以java socket编程模型为准,建立如同qq一样的通信服务 。 client /server .并且netty支持多种协议(不同的对象 head+body特征)
+                               只是head，对应的场景优化下的设计不同
+
+                               netty同样支持http：netty实现http客户端请求远程http服务：https://blog.csdn.net/feinifi/article/details/102981475
+
+                Netty包功能描述：https://krisjin.github.io/2015/02/16/netty-api-reference/
+
+
+                http vs rpc
+                    1.rpc是远端过程调用，其调用协议通常包含传输协议和序列化协议。传输协议包含: 如著名的 [gRPC](grpc / grpc.io) 使用的 http2 协议，也有如dubbo一类的自定义报文的tcp协议。
+                    序列化协议包含: 如基于文本编码的 xml json，也有二进制编码的 protobuf hessian等。
+
+                    2.既然有 HTTP 请求，为什么还要用 RPC 调用？  --- https://www.zhihu.com/question/41609070
+                        1.rpc自定义传输协议，精简了没用的信息传输 比如dubbo...
+                        2.成熟的rpc库相对http容器，更多的是封装了“服务发现”，"负载均衡"，“熔断降级 - 基于网络层  ”一类面向服务的高级特性.可以这么理解，rpc框架是面向服务的更高级的封装。如果把一个http servlet容器上封装一层服务发现和函数代理调用，那它就已经可以做一个rpc框架了
+
+
+
+        2.框架
+                1.netty流程图： https://www.processon.com/view/5f572bc1e0b34d6f59e612dc?fromnew=1
+                2.netty/redis/zk 高并发实战 ： https://www.processon.com/view/5fde11f5e401fd5bc83706a4?fromnew=1#map
+                3.netty架构.png
+        3.发展
+                1.从简单的socket ==> java nio ==>  netty 需要了哪些东西  x>就是主要3个方面
+                        1.常用的应用层协议支持 - 各种编解码  2>
+                        2.解决传输问题：粘包、半包现象  /异常场景 -是否读取完全...优雅关闭 /  3>
+                        3.支持流量整性
+                        4.完善的断连、idle等异常处理
+                        5.底层编解码处理
+                        6.流量控制、黑白名单
+                        7.快速 事件/异步 + 多线程  性能 还有各种buff.. 1>
+                        8.空间占用
+                        9.现有问题的解决：epoll bug 异常唤醒导致cpu 100%
+                        10.高层流式api
+
+                        1.byteBuffer --> bytebuf
+                        2.threadLocal --> FastThreadLocal
+                        3.隔离底层实现 
+
+
+                2. vs tomcat \ jetty \ mina 
+                        前两者都是为了专门支持servlet容器做的,没有单独的独立出通信框架
+                        历史原因/生态
+                3.使用
+                        1.数据库/大数据处理 spark/hadoop/rocketmq/es/grpc/dubbo/zookeeper/spring...
+                4.趋势
+                        1.更多协议支持
+                        ....
+        4.基础
+                1.三种io  饭就是数据
+                    1.bio(阻塞io)      排队打饭                               jdk1.4
+                    2.nio(非阻塞io)    点单、等待被叫、去端
+                    3.aio(异步io)      包厢模式 服务员端上来  需要os支持        jdk1.7
+
+                    阻塞 vs 非阻塞
+                        1.菜没好 要不要死等 说的是client端
+                    同步 vs 异步
+                        1.菜好了 谁端  说的是client和server server送就是异步，client收到通知去取，同步
+                2.netty
+                    1.过期bio 
+                    2.移除aio
+                    3.推广nio  common/linux/mac/bsd
+                3.对比nio/bio
+                    1.当连接少，一直线程一个连接，简单，高效
+                    2.面上扩展和后期，所以建议nio
+        5.切换nio-bio
+                1.修改对应类,整体流程不变  <=== 统一抽象模型，替换对应类
+        6.reactor
+                1.对比场景  --- 把顾客迎进来最关键了,后面稍微慢点也没事
+                     饭店伙计       线程
+                     迎宾工作       接入连接
+                     点菜：请求              1.一个人包揽所有：迎宾、点菜、做饭、上菜、送客等           reactor单线程
+                                            2.多招几个伙计  ：大家一起做上面的事情                 reactor多线程
+                                            3.进一步分工    ：搞一个或者多个人专门做迎宾           主从Reactor多线程模式
+                     上菜：响应
+                     送客：断链
+                
+                2.kafka配合多线程，将接受线程和处理线程分开  --> 递砖头  砖头的能量不变，从头到目的地。人没动，所以减少了能量消耗。那切换的耗能呢？还是说一个人干到底
+
+                3.注册感兴趣的事件  --> 扫描是否有感兴趣的事件发生  --> 事件发生后做相应的处理
+
+                    ===> 为什么自己扫描而不是完成后别人通知？
+
+                    对应的事件和注册
+
+                    client          SocketChannel                              op_connect          op_write            op_read
+                    server          ServerSocketChannel        op_accept    
+                    Server          ServerSocket                                                   op_write            op_read
+
+                4.单线程reactor ---> 专门迎宾线程，独立的reactor  --> 多线程reactor 
+                  单线程reactor.png / 多线程reactor.png
+                  在netty中使用nio三种模式.png
+
+                5.委派模式
+
+                6.bossgroup 是一个线程，而不是一个线程组
+
+        7.高性能点
+                1.PowerOfTwoEventExecutorChooser 使用 & 操作符
+                2.独立的线程池 unorderedThreadPoolEventExecutor
+                3.增强写，延迟与吞吐量的抉择 flushConsolidationHandler
+                4.流量整性 - 限流 整理流量形状 控制 平滑
+                        globalTrafficShapingHandler
+                        ChannelTrafficShapingHandler
+                        GloalChannel....
+
+                        流量整性.png
+                5.为不同平台提供native
+                6.避免oom
+                        1.上游发送快
+                        2.自己处理慢
+                        3.网络卡
+                        4.下游业务处理慢
+          高安全
+                1.设置高水位线保护自己
+                2.启用空闲检测
+                3.黑白名单
+                4.自定义授权
+                5.ssl
+
+
+          高扩展点
+                1.System.getProperty
+                2.loadProviderAsService 使用loader读取meta-inf下配置
+                3.selector / provider
+                4.配置文件中使用{}解析
+                5.设计模式
+                        1.单例  ReadTimeOutException
+                        2.工厂  ReflectiveChannelFactory
+                        3.策略  EventExecutorChooser
+                        4.装饰  wrappedByteBuf
+                        5.模板  AbstractTrafficShapingHandler
+                        6.责任链  ChannelPipeline channelHandler
+                        7.构造器  webSocketServerProtocolConfig.builder
+                        8.观察者  ChannelFuture addListner
+
+                6.kObjectHashMap / codegen.groovy 脚本 - 模板
+                7.注解：
+                        @Sharable @handler是否可以共享，不标记不可重复加入pipeline 
+                        @Skip
+                        @UnstableApi
+                8.使用jenkins pipeline + maven plugin进行测试 自动测试
+
+TODO:如何解决自己写jar包中对spring的依赖，对volitail等使用，对对象管理，以及作为公共的如何处理上层的多并发？？
+
+
+        8.netty解决网络问题
+                1.粘包/半包
+                        1.粘包原因 - 合并发送
+                            1.发送方每次写入数据 < 套接字缓冲区大小
+                            2.接收方读取套接字缓冲区数据不够及时
+                        2.半包原因
+                            1..................>......
+                            2.发送的数据大于协议MTU,必须拆包  ipv4:64kb ..
+                        3.根本原因
+                            1.tcp是流式协议，消息无边界
+                            2.udp像邮寄包裹，虽然一次运输多个，单每个包裹都有界限，一个一个签收，所以无粘包、半包问题
+                2.找出边界
+                        1.netty找出边界方案.png  --- 分隔符 / 已知长度 / 切割固定长度，判断最后不满足长度的就是完了 . 补零 ..
+                        2.当前使用：解析固定长度的字段，精确定位用户数据。
+                        3.FixedLengthFrameDecoder /DelimiterBasedFrameDecoder / LengthFieldBasedFrameDecoder(使用)
+
+                3.二次编解码 -  io.netty.handler.codec
+                        1.项目中，除了可选的压缩解压缩外，还需要一层解码，因为一次解码的结果是字节，需要和项目中所使用的对象进行转化，
+                          这层解码器可以成为二次解码器
+                          一次解码器 ByteToMessageDecoder  --> 二次解码器 MessageToMessageDecoder 
+                                    解决粘包/半包
+
+                        分层  / 耦合性减低，便于置换，扩展
+
+                        java序列化 - marshal - xml - json - messagePack - protobuf - 其他  == 空间/时间/可读性/支持集成 == 客观衡量 = 预估
+
+       9.keepalive与idle检测
+                1.keepalive   keepalive.png
+                        1.对端可能出现的问题，进行keepalive 
+                        2.问题出现概率小，没有必要频繁 / 判断需谨慎，不能武断，避免网络抖动 --- 总：2小时11分钟才断开
+
+                2.tcp层有，为什么应用层还有？
+                        1.协议分层，关注点不同 。 应用层关注的是否可以服务，而不是仅仅通
+                        2.tcp默认关闭，可能经过中转设备时丢弃
+                        3.tcp keepalive 默认是 >2 小时，属于系统参数，影响所有应用
+                3.vs http keepalive
+                        1.区分长短连接 和这里的不同
+
+                4.idel
+                        1.你不会在对方不说话时，你不会直接发问 ’你还在吗？‘ ----而是等待一段时间，网络本身不稳定性
+                        2.v1 : 定时keepalive消息   
+                          v2   空闲检测 + 判断idle时在发keepalive   <===== TODO: 其他分布式是不是也可以这么来检测
+                               空闲检测 + 断开  保持系统最好状态
+
+
+        10.锁  《18.netty中的锁事》
+                1.分析同步问题的核心三要素
+                        1.原子性
+                        2.可见性
+                        3.有序性
+
+
+                2.锁的分类
+
+
+                3.netty锁的五大关键点
+                        1.减少粒度              在意锁的对象和范围       初始化channel  ServerBootstrap.init()
+                        2.减少空间占用           在意锁对象本身大小       atomic object -> volatile primary type + static atomic fieldUpdater
+                        3.注意锁的速度           提高速度                 LongCounter AtomicLong --> LongAdder 特性场景
+                        4.不同场景下的并发类      因需而变                 linkedBlockingQueue  --> jctools mpsc
+                        5.衡量锁的价值           能不用就不用             固定服务员负责几个包厢而不是所有的，避免上下文切换  局部串行化   ===> 局部串行 + 整体并行 > 一个队列 + 线程池 
+                          threadlocal  recycler.threadlocal
+
+
+       11.内存使用
+                1.能用基本不用包装
+                2.定义为类变量的不要定位为实例变量
+                3.对size进行预估 直接new hashmap(size) guava Maps.newHashMapWithExpectedSize()  
+                AdaptiveRecvByteBufAllocator
+                4.zero copy     ByteToMessageDecoder .composite_cum....使用逻辑试图代替复制
+                                Unpooled.wrappeduffer()  使用包装代替实际复制
+                                调用jdk nio DefaultFileRegion.transferTo
+                5.对外内存
+                6.内存池         Recycler.newInstance / apache commons pool
+
+      12.服务
+                1.启动服务
+                        1.our thread 
+                                1.创建selector
+                                2.创建server socket channel
+                                3.初始化server socket channel
+                                4.给server socket channel从boss group中选择一个nioEventLoop
+                        --- 线程切换 ---
+                        2.boos thread
+                                1.将server socket channel注册到选择的nioEventLoop的selector上
+                                2.绑定地址启动
+                                3.注册接受连接事件op_accept到selector上
+                2.构建连接  -- nioEventLoop run 死循环
+                        1.boss thread
+                                1.nioEvent中的selector轮询创建连接事件
+                                2.创建socket channel 
+                                3.初始化socket channel并从worker group中选择一个nioEventLoop
+                        2.work thread
+                                1.将socket channel注册到选择的nioEventLoop的selector
+                                2.注册读事件op_read到selector上
+
+                            阻塞/finally中异常中并不一定要处理，或者是sleep(xx)，或者是 continue下次...;根据场景完成最合适
+                3.接受数据 
+                        1.读取数据 - work thread
+                                1.自适应数据大小的分配器(AdaptiveRecvByteBufAllocator)  放大果断、缩小谨慎  <--- 判据是什么/
+                                        1.根据实际装的情况猜一猜下次情况，从而决定下次带多大的桶
+                                2.连续读(defaultMaxMessagePerRead)
+                                        1.桶装满了,你觉得可能还有东西发放，就拿新通等着装，而不是回家，取，让别人等
+
+                            本质
+                                处理op_read事件 NioSocketChannelUnsafe.read()
+                                        1.分配1024 byte buffer
+                                        2.从channel接受数据到byte buffer
+                                        3.记录实际接受数据大小，调整下次分配byte buffer大小
+                                        4.触发pipeline.firechannelRead(byteBuf)把读取到的数据传播出去
+                                        5.判断接受bytebuffe是否满载而归，是，尝试继续读取直到没有数据或满16次；否，结束本轮读取，等待下次op_read事件  16次：雨露均沾  （贪心+现实）
+
+
+                4.业务处理
+                        1.触发 pipeline.fireChannelRead(byteBuf)把读取到的数据传播出去
+                        2.inbound / outbound 写给另一个端 pipeline中hander中channelRead()执行
+                        3.@Skip
+                
+                5.发送处理
+                        1.write /flush / writeAndFlush
+                        2.特点
+                                1.对方仓库爆仓，送不了时候，停止送，协商等电话通知什么时候好了，再送
+                                  netty写数据，写不进去时，会停止写，然后注册一个op_write事件，来通知什么时候写进去再写
+                                2.发送快递时，对方仓库都直接手下，尝试发送更多快递，效果更好  <=== 自动调整
+                                  netty批量写数据时，如果想写的都写进去了，接下来尝试写更多 调整maxBytesPerGathringWrite
+                                3.发到某个地方快递多，连续发，但快递毕竟优先，也会考虑其他地方
+                                  netty只要有数据要写，且能写的出去，且一直尝试，直到写不出去或者满16次 writeSpinCount
+                                4.接受太多，发送来不及时，爆仓，这个时候出个告示牌；收不下了，最好2天再来邮寄
+                                  netty写数据太多，超过一定水位线 writeBufferWaterMark.high() ,将可写标志位改为false,让应用端自己做决定要不要发送数据了
+
+                6.关闭连接(短连接) -- 复用连接
+                        1.判断接受的数据大小是否<0,如果是，说明是关闭，开始执行关闭
+                                1.关闭channel 包含cancel多路复用器的key
+                                2.清理消息：不接受新信息，fail掉所有queue中消息
+                                3.触发firechannelinactive和fireChannelUnregistered
+
+                7.关闭服务
+                        1.workGroup/bossGroup关闭
+                        2.关闭所有channel - 去执行存储的task/hooks / 最大优美事件 / 静默期是否有任务执行  <---将里面的数据处理完循环直到关闭
+                        
+      
+      13.代码编写
+                1.去网上检索“ 最佳实践 ” - 检索“ 坑 ” - 对比经典案例 
+                2.检查是否可诊断 - 是否可度量
+                3.收集错误数据(日志/监控) - 收集性能数据 
+
+
+      14.编写玩具版netty
+                1.案例及数据结构
+                        1.netty数据结构.png  
+                                1.opCode / streamId ...message(head +  body）  + tcp协议  <--- 通信级操作
+                                2.自定义自己的数据对象借助netty中的解决方案 粘包/半包来解决。也就是现在是网络变成而不是实现netty功能
+                                  区别于直接调用netty api 这里我们自己 ’ 基于netty的扩展实现自己的编解码 ‘
+
+                        2.为什么有这些，不是就像http一样直接有json传递吗？
+                                直接借助了httpClient
+
+                        3.netty中易错点
+                                1.LengthFieldBasedFrameDecoder中initialBytesToStrip未考虑设置
+                                2.ChannelHandler顺序不正确
+                                3.ChannelHander 该共享不共享，不该共享却共享
+                                4.分配ByteBuf 分配器直接用ByteBufAllocator.DEFUALT等，而不是ChannelHandlerContext.alloc()
+                                5.未考虑ByteBuf的释放
+                                6.错以为ChannelHandlerContext.write(msg)就写出数据了
+                                7.乱用ChannelHandlerContext.channel().writeAndFlush(msg)
+
+     15.调优
+                1.系统参数
+                        1.linux tcp_keepalive_time 
+                        2.ChannelOption.SO_BACKLOG
+                        3.ulimit -n xx 修改当前用户打开句柄数量 防止报错too manay open file 在shell中登录直接设置
+                        4.SO_TIMEOUT 阻塞时间
+                        5.socketChannel7个参数.png +
+                             seversocketChannel3个参数.png +
+                             权衡netty参数.png + 
+                             netty系统参数.png
+
+                        可以通过代码中.option（）进行设置
+
+     16.诊断
+                1.线程名
+                2.类名 避免内部类名字
+                3.netty日志
+                        1.继承ChannelDuplexHandler 
+                        2.io.dropwizard.metrics进行统计信息，输出到日志 / jmx
+                        3.编码
+                        4.添加到netty addLastHandler
+
+                        netty监控维度.png
+                4.内存泄漏检测
+                        1.ResourceLeakDetector <--- WeakRefrence
+                        2.netty内存泄漏.png
+                        3.GC后，才有可能检测到
+
+    17.框架特点
+            1.已用 少量代码和配置
+            2.内置功能 空闲监控、流量整形、安全
+            3.业务可插拔的handler
+            4.复合多个内容
+                    1.网络编程
+                    2.各种协议
+                    3.设计模式
+                    4.现实取舍
+
+    18.框架中如何高效使用netty 《55-57》  <=== 问题：为什么不直接使用json？httpclient 为什么要使用netty
+
+            自定义自己的传输结构-对象 + 序列化 + netty 传输 , 而不是json + http
+
+            1.cassandra
+            2.dubbo
+                    1.
+                    2.
+
+            3.hadoop 
+
+            <======== 结合自己的实践 比如 oss jar中netty的使用 ==========> 
+
+
+
+
+    开源代码贡献
+        认真/严谨
+
+
+        TODO:channle vs serversocketchannel
+                channle是什么
+                selector   register 
+                本质是 事件+多线程 共同完成的 : regFuture/addListner /addTask /ScheduledFutureTask 各种线程和事件异步的组合
+
+                pipeline .. xxhandler addlast--链
+
+                wrapperxx
+
+                channelinitial
+
+                selectStrategy
+
+                channelOption
+
+                unsafe类
+                ***context
+
+                @schedual
+
+                封装成一个个task <-- 图搜中封装task
+
+                枚举中的属性是xxclass xxx...关联的属性，类似于类，只不过固定实例化了-- 比如接受类/处理类/结果类
