@@ -1,0 +1,41 @@
+
+现象描述
+      没有相似度显示 
+
+问题拆分  
+      1.前台不能提供requstid /traceid   ==> F12查看 xsd / targetImagePath
+      2.即使有requetid后台不一定可以链接起来
+      3.后台日志刷新很快，只能通过es从日志监控中搂取  ====> 对es的语法不熟  * and content: "111053_dgFZDAHGqv.jpg" and traceId: axxx.ddd.232.32 
+      4.对于targetpath只能在最后返回的地方看到，没有在处理过程中对该值进行log ,没有线索丢失。打开debug也是没有，只返回数量
+      
+角度
+      1.正向流程逻辑 -- 从链路关键点上先定位
+          1.sql没有返回distance ，因为从返回结果看,是基本符合预期的，所以说sql执行不可能有问题，
+          2.没有走打分逻辑
+      2.逆向
+          1. 最近是否有改动相关
+
+复现 + 定位 debug
+      1.本地复现  - 需要对拉取的master，快速启动，' 平时积累 ' ，直接拿到对应 ‘ 接口搜索，通过工具调用 ’,这里调用向量搜索 。 
+                <-- 从test中进行快速 + debug <--- 比如这里的i向量处理(类型转换、映射 '[121,2323,2323,343,323]')    
+      2.测试环境复现 - 远程debug  ‘ 可以通过页面直接进行调用查看，页面点击 + 外界依赖无需mock ’
+
+        ==> 平时注意整理套件
+
+最后的解决：
+            mybatis升级后，导致不能自动映射相同字段, 没有映射上.
+
+
+思考： 
+    1.  有错误报错
+        没有错误报错
+    2.resultMap 中的extends="xx.xxx.baseMap" 与 sql中<include refid="common.xx.xx">
+    3.平时多积累，才能在关键的时候顺手拿来    
+          比如这里的sql postgres:l2_distance( feature_data , array[-0.07435....]::FLOAT2[]) 这种处理方式 
+          holo写法  ： pm_approx_Squared_euclidean_distance( patch_feature_data_0, '{"0.0315265953540802","-0.04558330401778221"}')
+    
+    
+    4.TODO:自己对类型转换、字节、浮点等理解不足。导致转换起来混乱
+
+
+
