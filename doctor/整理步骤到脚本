@@ -1,3 +1,6 @@
+shell处理linux中信号： https://www.jianshu.com/p/c4ef65eb51cb
+
+
 func_parse_sql()
 {
         grep -iE '==>|<==' timeout.tmp | awk -F [ '{print $3}' ;
