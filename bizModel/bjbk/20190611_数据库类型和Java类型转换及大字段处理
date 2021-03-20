@@ -1,0 +1,9 @@
+orm sql与返回接受 。类型强制转换  工具类中的对基本类型的判断和解析 转换 对象直接反射操作  sql中的交并差 函数   时间函数
+		CLOB和BLOB的字段录入和读取    https://rayln.iteye.com/blog/1181653
+		oracle中数据类型对应java类型  https://www.cnblogs.com/softidea/p/7101091.html
+		
+		定义规范的接口，简洁明了，字段取名要规范化
+		
+		写代码一定结合数据库字段类型 长度 ， 前台字段类型(前台都是String？不是的。)
+	强转：前置  xxobj inStance of xxx ...才可以强转  并不是都可以转为string  所以想要统一获得string 则toString 但是这里注意null的情况
+	
