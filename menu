@@ -27,17 +27,24 @@ menu list
 	8.加速技术 	     redisTech		  《146-redis核心技术和实战》
 			nettyTech	      《93-netty源码剖析及实战》
 			esTech
-	9.并发实战技术   threadTech
+	9.并发实战技术   threadTech		<玩转java并发工具，经通juc,成为并发多面手>
 	10.性能	       fastTech
-	10.jvm技术  
-	11.springcloud/dubbo
+	10.jvm技术       已经整理过，虽然没有系统整理，但这个模块依赖doctor.performanceTech从多维度定位  
+	11.算法与数据结构			<01-数据结构和算法之美>
+	12.springcloud/dubbo
 	
 	
 	活性::::::::: 从mybatis 动态sql中 得知 从select <id=clomn> from ${} where <id=filter...里面有<if...>..> order by ${} ...
                                             这样 分层编写 修改起来就比较方便了。只需要修改一个地方
 
-    doctor
-        1.cpu100
+    doctor  
+    	1.performanceTech  
+	2.文件系统读写权限导致应用异常  
+	3.cpu100  
+	4.逻辑不对但没有报错
+
+
+
 
     =============================目录==================================
     
@@ -55,13 +62,7 @@ menu list
 		
     
     
-    
-    
-    
-    
-    
-    
-    
+   
     
     
     
