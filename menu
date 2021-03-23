@@ -27,8 +27,8 @@ menu list
 	8.加速技术 	     redisTech		  《146-redis核心技术和实战》
 			nettyTech	      《93-netty源码剖析及实战》
 			esTech
-	9.并发实战技术   
-	10.性能测试
+	9.并发实战技术   threadTech
+	10.性能	       fastTech
 	10.jvm技术  
 	11.springcloud/dubbo
 	
