@@ -3,3 +3,4 @@ build Architector + Doctor --> channel --> bizModel
 
     1.测试仿真生产环境搭建，线上有问题且没有日志时，本地复现，并debug代码
     2.多维度验证
+    3.debug
