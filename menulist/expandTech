@@ -1,0 +1,58 @@
+扩展
+		1.devOps.灵活性
+		2.devOps.自动化
+		3.MockFramework.codeImpl
+				1.层设计 - 初始化方式 - 传递方式 - 定位 - 资源获取 - 结构
+				2.设计模式的复合使用
+				3.搜索：为什么我写不出框架级别的代码
+
+		4.补充
+				1.配置文件中使用json 配合spring @conditional
+
+					@Value("#{${xx.xx.xx.xx.config:"
+			        + "{\"listHistoryStreamLimit\":10,\"ffmpegCaptureLimit\":10,\"recognizeTargetLimit\":10,"
+			        }}}")
+			   		 private Map<String, Object> config;  == > 自动注入映射为map,进行处理
+
+			    	MapUtils.getFloatValue(config, "bodySim", 0.8f);
+
+			    	spring中$和#  ： 就是说，第一个注入的是外部参数对应的property，第二个则是SpEL表达式对应的内容。
+			    				  	https://www.cnblogs.com/larryzeal/p/5910149.html
+
+				2.可扩展性还包括对this的以及call和apply方法的灵活运用
+
+				3.使用@ConditionalOnProperty来判断类是否加载
+					@ConditionalOnProperty(name = Constants.xxxx, havingValue = "true")
+
+				4. @Value(Constants.xx)从常量中读取配置,统一管理
+					public static final String xxx = "${xx.xx.xx.xxxx:默认值}";
+
+				5.自定义注解 判断  -- LifeAndWorkTodo.codeImpl .注解  -- 标记接口 - group - tag 
+								  -- LifeAndWorkTodo.annBoy    注解的深入比如注解的继承、自定义注解叠加含义功能
+
+							@Configuration
+							@Component
+							@ConditionalOnProperty(name = Constants.xxx, havingValue = "true")
+							@ConditionalOnPropertyContainsAny(value = {Constants.xxx,
+							   })
+							@ConditionalOnAnyPropertyEqual(names = {
+							    Constants.xxx
+							}, value = "true")
+							public class xxxxSelector {
+							
+
+
+
+				6.定时任务
+					 public static final String xxx = "${xx.xx.xx.xx.xx:0 0/5 * * * ?}"; 
+					 使用schedualedPool进行
+					 timer类
+
+				7.阈值
+				8.url /endpoint / enabled 开关参数
+
+				9.spring的前缀注入
+					 @Bean(name = "xx")
+				    @ConfigurationProperties(prefix = "vcxxs.daxxx.adxxds")
+				    @ConditionalOnPropertyContainsAny(value = {"vxxxcs.xx.xxx.xx.urxxl"})
+				    public DataSource adsDataSource() {
