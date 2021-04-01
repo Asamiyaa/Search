@@ -1,0 +1,44 @@
+宗旨：更健壮(异常、召回率)、更快速、更扩展(云-ddd-敏捷-迭代)
+
+参考：devOps.健壮性
+	  程序的健壮性和鲁棒性：https://www.cnblogs.com/peterYong/p/6556606.html
+	  已做需求思考：LifeAndWorkTodo.goHead
+
+
+健壮性
+		1.业务场景(包括异常) - 流程 - 抽象 - 分支合理
+				1.最基本，但也是最重要的。业务是立足之本，花时间整理
+				2.整体结构图 - 流程图 - 主要代码细节 (对着文档 + 代码 + 日志 + 前台触发 + 总结环境mock + 测试数据案例)
+
+
+		2.接口
+				1.devOps.openApi
+				2.MockFramework.interfacePoint
+				3.MockFramework.methodPoint 
+
+
+		3.代码级异常场景
+				1.MockFramework.codeImpl
+						1.规范性
+								0.抛出
+								1.重试
+								2.舍弃
+	
+		4.一致性
+				1.MockFramework.Kmain	
+						1.有序
+						2.幂等
+						..
+
+		5.安全
+				1.sql注入
+				2.鉴权 - 限流
+
+
+		6.review
+				1.MockFramework.checklist
+
+
+
+
+
