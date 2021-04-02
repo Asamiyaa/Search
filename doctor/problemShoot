@@ -1,0 +1,174 @@
+
+问题排查
+    0.注意从 多维度 验证自己的判断，找到本质错误
+    
+    1.业务问题：重现 -本地环境 - 代码debug - 分析 - 验证
+				            线上环境  - 远程debug
+				   			-  arthas对参数流程+日志 
+
+			--- 业务问题依赖对流程/代码的熟悉程度
+
+
+		2.性能
+				1.各个指标含义及命令组合
+						1.问题拆分决策树.png 
+						2.全局到定向.png      从cpu - memory - disk - network维度列出各个指标
+						3.监控命令
+								1.监控命令.png 
+								2.各个监控命令局限性及组合.png
+						4.瓶颈判断 - os - 模块 - 监控命令
+								1.cpu   常见：us(用户占用) - wa(io占用) - sy(系统) - si(软中断) - hi(硬盘)  不常见：ni(nice值) - st(虚拟服务器占用)        
+										1.参考top命令指南：https://www.cnblogs.com/makelu/p/11169270.html
+										2.cpu问题排查流程.png  --定位到具体进程  - 线程 - java工具 - 代码 / 配置
+										3.top命令后进程的cpu占用是否有进程占用100% 或者更高
+
+										4.Linux查看物理CPU个数、核数、逻辑CPU个数
+
+											# 查看物理CPU个数
+											cat /proc/cpuinfo| grep "physical id"| sort| uniq| wc -l
+
+											# 查看每个物理CPU中core的个数(即核数)
+											cat /proc/cpuinfo| grep "cpu cores"| uniq
+
+											# 查看逻辑CPU的个数
+											cat /proc/cpuinfo| grep "processor"| wc -l
+
+								2.memory
+										1.关键看：avail，包含了free . tatal = avail + used ，avail 包含了buff/cache中可用和free 
+										          totol 表示总内存，free 表示没使用过的内容，used是已经使用的内存。buff表示用于读写磁盘缓存的内存，cache表示用于读写文件缓存的内存。avail表示可用的应用内存。
+										2.Swap原理是把一块磁盘空间或者一个本地文件当成内存来使用。Swap total表示能用的swap总量，swap free表示剩余，used表示已经使用的。这三个值都为0表示系统关闭了swap功能，由于演示环境是一台虚拟机，虚拟机一般都关闭swap功能。
+
+										如何查看linux 系统内存大小的信息，可以查看总内存，剩余内存，可使用内存等信息  
+										cat /proc/meminfo  信息Dirty  hugePage directMap1g ...
+
+								3.thread 
+										1.VIRT 进程使用的虚拟内存
+											RES 进程使用的物理内存（不包括共享内存）
+											MEM 进程使用的内存占比
+										2.查看java进程及参数
+											jps
+											jinfo -flags pid 
+
+										3.jdk自带工具  ： https://www.cnblogs.com/z-sm/p/6745375.html
+										4.arthas 
+								4.io
+										1.iocall简图.png 
+										2.Linux IO实时监控iostat命令详解  : https://www.cnblogs.com/ggjucheng/archive/2013/01/13/2858810.html
+											 常用参数： rrqm/s：每秒这个设备相关的读取请求有多少被Merge了
+											           avgqu-sz 是平均请求队列的长度。毫无疑问，队列长度越短越好。
+											           await：  每一个IO请求的处理的平均时间（单位是微秒毫秒）。这里可以理解为IO的响应时间，一般地系统IO响应时间应该低于5ms，如果大于10ms就比较大了。
+																         这个时间包括了队列时间和服务时间，也就是说，一般情况下，await大于svctm，它们的差值越小，则说明队列时间越短，反之差值越大，队列时间越长，说明系统出了问题。
+																svctm    表示平均每次设备I/O操作的服务时间（以毫秒为单位）。如果svctm的值与await很接近，表示几乎没有I/O等待，磁盘性能很好，如果await的值远高于svctm的值，则表示I/O队列等待太长，         系统上运行的应用程序将变慢。
+																%util： 在统计时间内所有处理IO时间，除以总共统计时间。例如，如果统计间隔1秒，该设备有0.8秒在处理IO，而0.2秒闲置，那么该设备的%util = 0.8/1 = 80%，所以该参数暗示了设备的繁忙程度
+																一般地，如果该参数是100%表示设备已经接近满负荷运行了（当然如果是多磁盘，即使%util是100%，因为磁盘的并发能力，所以磁盘使用未必就到了瓶颈）。
+
+												可以看到磁盘的平均响应时间<5ms，磁盘使用率>80。磁盘响应正常，但是已经很繁忙了。
+												IO/s = r/s + w/s = 18.33+114.33 = 132.66
+								5.net 
+										1.netstat -a 
+										  该命令state表示：listener - establish :https://blog.csdn.net/klzyf100/article/details/78811685
+										  一个是Active Internet connections，称为有源TCP连接，其中"Recv-Q"和"Send-Q"指%0A的是接收队列和发送队列。这些数字一般都应该是0。如果不是则表示软件包正在队列中堆积。这种情况只能在非常少的情况见到。
+
+										  网卡把数据接过来，经过队列、环形缓冲区，再经过传输层，最后通过tcp_rmem给到应 用。
+
+										2.网络queue定位谁的问题.png  服务端 - 接收端 - 网络
+										  上面没有问题还有可能是网络参数问题：网络参数导致丢包.png 
+										3.三次握手-四次挥手
+										4.time-wait一般无需手动处理，除了，只有一种情况要处理TIME_WAIT，那就是端口不够用的时。65535
+											
+											一个 TCP 连接大概占 3KB，创建 10 万个连接，才100000x3KB≈300M左右，何况最多才 65535 呢？服务器有那么穷吗？.不会因为端口耗尽内存资源
+
+
+
+								6.system
+										1.vmstat r:表示运行队列  当这个值超过了CPU数目，就会出现CPU瓶颈了。这个也和top的负载有关系，一般负载超过了3就比较高，超过了5就高，超过了10就不正常了
+										2.常用参数：si  每秒从磁盘读入虚拟内存的大小，如果这个值大于0，表示物理内存不够用或者内存泄露了，要查找耗内存进程解决掉。我的机器内存充裕，一切正常。
+											so  每秒虚拟内存写入磁盘的大小，如果这个值大于0，同上。
+											bi  块设备每秒接收的块数量，这里的块设备是指系统上所有的磁盘和其他块设备，默认块大小是1024byte，我本机上没什么IO操作，所以一直是0，但是我曾在处理拷贝大量数据(2-3T)的机器上看过可以达到140000/s，磁盘写入速度差不多140M每秒
+											bo 块设备每秒发送的块数量，例如我们读取文件，bo就要大于0。bi和bo一般都要接近0，不然就是IO过于频繁，需要调整。
+											参考：https://www.cnblogs.com/ggjucheng/archive/2012/01/05/2312625.html
+											
+										3.显然是由于in引起的cs，CPU 队列那么高也是由in导致的。
+
+								7. swap
+										1.sysctl -a|grep swappiness  sysctl -a|grep vm.min_free_kbytes查看发生swap的上限
+
+										当操作系统中配置了vm.swappiness是 30%，那么当内存用到1-30%=70%的 时候，就会发生 Swap。
+
+										2.vmstat中的si /so 指的就是系统的swap.通常为0，因为开启swap肯定会造成性能损失
+
+
+								8.应用层
+
+										参考：JDK工具（查看JVM参数、内存使用情况及分析等） ： https://www.cnblogs.com/z-sm/p/6745375.html
+											  线上CPU飙升100%问题排查，一篇足矣		   ：https://www.cnblogs.com/dennyzhangdd/p/11585971.html
+
+										1.代码级分析流程.png 
+												1.执行“top”命令：查看所有进程占系统CPU的排序。极大可能排第一个的就是咱们的java进程（COMMAND列）。PID那一列就是进程号。或者jps -l 查看
+												2.执行“top -Hp 进程号”命令：查看java进程下的所有线程占CPU的情况。  
+												3.执行“printf "%x\n" 10命令 ：后续查看线程堆栈信息展示的都是十六进制，为了找到咱们的线程堆栈信息，咱们需要把线程号转成16进制。例如,printf "%x\n 10-》打印：a，那么在jstack中线程号就是0xa.
+												4.执行 “jstack 进程号 | grep 线程ID”  查找某进程下-》线程ID（jstack堆栈信息中的nid）=0xa的线程状态。如果“"VM Thread" os_prio=0 tid=0x00007f871806e000 nid=0xa runnable”，第一个双引号圈起来的就是线程名，如果是“VM Thread”这就是虚拟机GC回收线程了
+														或者jstack 进程号 >> a.txt 
+
+														线程快照是当前java虚拟机每一条线程正在执行的方法堆栈的集合，生成线程快照的主要目的是用于定位线程出现长时间停顿的原因，如线程间死锁、死循环、请求外部资源导致长时间等待。
+
+
+														关注点：
+
+
+												5.执行“jstat -gcutil 进程号 统计间隔毫秒 统计次数（缺省代表一致统计）”，查看某进程GC持续变化情况，如果发现返回中FGC很大且一直增大-》确认Full GC! 也可以使用“jmap -heap 进程ID”查看一下进程的堆内从是不是要溢出了，特别是老年代内从使用情况一般是达到阈值(具体看垃圾回收器和启动时配置的阈值)就会进程Full GC。
+														主要是对java应用程序的资源和性能进行实时的命令行监控，包括了对heap size和垃圾回收状况的监控。
+														1、jstat -gc PID 5000 20
+
+														2.gc的规则：
+
+
+
+												6.执行“jmap -dump:format=b,file=filename 进程ID”，导出某进程下内存heap输出到文件中。可以通过eclipse的mat工具查看内存中有哪些对象比较多,飞机票：Eclipse Memory Analyzer（MAT），内存泄漏插件，安装使用一条龙；
+
+														堆Dump是反映堆使用情况的内存镜像，其中主要包括系统信息、虚拟机属性、完整的线程Dump、所有类和对象的状态等。一般在内存不足，GC异常等情况下，我们会去怀疑内存泄漏，这个时候就会去打印堆Dump。
+
+														jmap pid 
+														jmap -heap pid 查看堆使用情况
+														jmap -histo pid 查看堆中对象数量和大小
+														jmap -dump:format=b,file=heapdump pid：将内存使用的详细情况输出到文件
+															jhat -port 4000 文件名 ，在浏览器中访问http:localhost:4000/
+
+												7.分析问题
+														cpu 100%通常原因：https://www.cnblogs.com/dennyzhangdd/p/11585971.html
+														
+
+												8.动态更改
+														1.jinfo可以用来查看正在运行的java运用程序的扩展参数，甚至支持在运行时动态地更改部分参数。
+														2.参数含义：
+
+
+
+												9.如果条件可以使用可视化监控工具（JConsole、JVisualVM）动态监控
+
+
+
+
+
+
+								9.常用中间件
+										1.tomcat
+										2.mysql
+										3.kafka
+
+
+
+
+
+
+
+
+				2.指标结合分析，多维度论证
+				3.
+
+
+
+
+
+
+
