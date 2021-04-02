@@ -29,7 +29,9 @@
 
 				5.自定义注解 判断  -- LifeAndWorkTodo.codeImpl .注解  -- 标记接口 - group - tag 
 								  -- LifeAndWorkTodo.annBoy    注解的深入比如注解的继承、自定义注解叠加含义功能
-
+							          -- searcher.annotationSikao
+								  
+								  
 							@Configuration
 							@Component
 							@ConditionalOnProperty(name = Constants.xxx, havingValue = "true")
