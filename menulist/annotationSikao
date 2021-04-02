@@ -1,0 +1,104 @@
+@SpringBootApplication
+public class OptionalTest {
+
+
+    public static void main(String[] args) {
+        SpringApplication.run(OptionalTest.class, args);
+
+        System.out.println("App start  !!!");
+
+//        System.out.println(applicationContext);
+//        applicationContext.getBeansWithAnnotation()
+
+    }
+@Component(value="ann")
+@test(testRet = false)
+@test2
+class ann implements InitializingBean {
+
+    @Autowired
+    private  ApplicationContext applicationContext;
+
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        System.out.println(applicationContext);
+        applicationContext.getBeansWithAnnotation(test.class).entrySet().stream().forEach(System.out::println);
+        System.out.println("ann value is "+applicationContext.findAnnotationOnBean("ann", test.class).testRet());
+        System.out.println("ann value is "+applicationContext.findAnnotationOnBean("ann", test2.class));
+
+        //组功能 - 自定义接口 - tag(注解/统一父类自动在上层进行流转 - 工作流) - 注解
+        System.out.println(Arrays.toString(applicationContext.getBeanNamesForAnnotation(test.class)));
+
+        //引入AnnotationUtils / AnnotationUtils 等这些已有的工具类
+        System.out.println(AnnotationUtils.findAnnotation(ann.class, test.class).testRet());
+
+        //引入spring其他接口实现类似功能  BeanPostProcessor  https://blog.csdn.net/qianyiyiding/article/details/77150864
+
+
+    }
+}
+
+    /**
+     * 已有注解
+     *
+     * @ComponentScan, @ConfigurationPropertiesScan, @EntityScan, or @SpringBootApplication
+*      @Configuration  @ImportResource  @Import{ MyConfig.class, MyAnotherConfig.class })
+*      @SpringBootApplication or @EnableAutoConfiguration(exclude={DataSourceAutoConfiguration.class})--->通过查看源码知道配置哪些属性
+*      @Autowired @Component, @Service, @Repository, @Controller
+*      @SpringBootApplication = @EnableAutoConfiguration+@ComponentScan+@Configuration
+*      @WebServlet, @WebFilter, and @WebListener can be enabled by using @ServletComponentScan.
+     */
+@Target({ElementType.TYPE,ElementType.CONSTRUCTOR, ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD, ElementType.ANNOTATION_TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+//同一个对象上重复使用
+//@Inherited
+@interface test{
+    boolean testRet() default true;
+}
+
+//继承能力验证 -- 更加简明之意，比如自定义@patchxxx继承自@Autowared就可以有自动注入能力
+@test
+@interface test2{
+
+}
+
+
+//@conditional  @Conditional注解配合Condition接口的基本实现，以及如何使用条件注解@ConditionalOnBean和@ConditionalOnClass和基于配置的@ConditionalOnProperty
+
+    @Bean
+    @ConditionalOnExpression("#{'true'.equals(environment['conditional.express'])}")
+    public ann expressTrueBean() {
+        return new ann();
+    }
+
+//自定义条件注解
+//其他注解条件
+@Conditional(xx.ConditionalOnMutilProperty.OnMultiProperty.class)  //使用@condition和Condition接口共同配合完成
+public @interface ConditionalOnMutilProperty {
+    String[] names();
+
+    String[] values();
+
+    String logic() default "and";
+
+
+    class OnMultiProperty implements Condition {
+        public static final String PROPERTIES_RPREIFX = "${";  //定义逻辑中
+        public static final String PROPERTIES_SUFFIX = "}";
+
+        @Override
+        public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+            Map<String, Object> attrs = metadata.getAnnotationAttributes(com.aliyun.citybrain.vcs.dataengine.common.spring.ConditionalOnMutilProperty.class.getName());
+
+        }
+
+        ....
+
+       StringUtils.defaultIfBlank(context.getEnvironment().getProperty(name), defaultValue);
+        ....
+
+
+
+
