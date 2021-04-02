@@ -63,3 +63,5 @@
 				10.sql
 				    从mybatis 动态sql中 得知 从select <id=clomn> from ${} where <id=filter...里面有<if...>..> order by ${} ...
                                             这样 分层编写 修改起来就比较方便了。只需要修改一个地方
+					    
+			        11.泛型和函数式编程结合 fanxingAFunctionTech
