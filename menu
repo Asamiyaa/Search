@@ -23,12 +23,12 @@ menu list
 	5.zookeeper技术 zookeeperTech         《84-zookeeper实战和源码解析》 
 	6.流处理          streamTech          《134-软件设计之美》+ 《》
 	7.大数据处理技术   bigDataTech         《36-大规模数据处理实战》 
-	8.加速技术 	     redisTech		  《146-redis核心技术和实战》
-			nettyTech	      《93-netty源码剖析及实战》
-			esTech
-	9.并发实战技术   threadTech		<玩转java并发工具，经通juc,成为并发多面手>
-	10.jvm技术       已经整理过，虽然没有系统整理，但这个模块依赖doctor.performanceTech从多维度定位  
-	11.算法与数据结构			<01-数据结构和算法之美>
+	8.加速技术 	      redisTech		  《146-redis核心技术和实战》
+			 nettyTech	      《93-netty源码剖析及实战》
+			 esTech
+	9.并发实战技术    threadTech		     <玩转java并发工具，经通juc,成为并发多面手>
+	10.jvm技术       problemShoot             https://github.com/doocs/jvm   
+	11.算法与数据结构 algoTech +fastTech  <01-数据结构和算法之美>
 	12.springcloud/dubbo
 	
 
