@@ -867,7 +867,12 @@
 
 										1.ArrayBlockingQueue
 												1.ArrayBlockingQueueDemo.java
-
+												Java多线程——ArrayBlockingQueue的使用: https://blog.csdn.net/brucexiajun/article/details/80019384			
+												Java阻塞队列ArrayBlockingQueue使用及原理分析:https://blog.csdn.net/csdn_xpw/article/details/78400225
+												深入理解条件变量Condition:https://zhuanlan.zhihu.com/p/49301167
+													使用很简单，只要将ArrayBlockingQueue的api比如offer/take调用即可；无需使用condition,notFull.notify...这些是ArrayBlockingQueue底层实现的
+												
+												
 										2.LinkedBlockingQueue
 												1.无界 integer.maxvalue
 
