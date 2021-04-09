@@ -1,0 +1,173 @@
+
+
+*** 0.简历 -- 技术盲点 -- 项目确认  ***
+	整体介绍：
+			警务室（Son，简称 SPS）是基于视频AI打造的一款智慧警务应用，服务于一线民警的日常工作，应用在打击犯罪、人员走失等业务领域，有效帮助派出所提高工作效率、提升破案率、降低案发率。
+			saas -- paas 
+			图搜中台 ： 以图搜图 - 以特征搜图 - 以时间地点范围搜图 - 局部搜 - 万物搜 - 多模态搜索(训练中) - 定位身份和轨迹 - 背影寻人 - 时空轨迹
+
+			           多维度组合搜索 (人脸-机动车-人体) 摄像头锁定
+			       wws:万物搜指用户可对某一感兴趣区域作为目标，在所选时空范围内搜索与目标相似的结果。常用于物品线索追踪，如一个包、明显特征衣物、车辆外装饰等。最终希望找到与该物品相关的人或车，实现0-1的突破，再通过人机非脸搜索出更多线索。
+			       todo：注意后台流程
+			       数据源：视频，速度慢。
+
+			       局部搜：针对行人身体某个局部区域（包、手提袋等），搜索拥有相似特征（如同款包）的行人结果。注意：目前仅针对人体有效。后续会扩展至机动车、非机动车。
+			       数据源：基于已结构化的大图小图，速度快。
+				
+				   步态搜：针对目标步态特征，搜索相似步态的行人结果。注意：目前仅针对人体有效。
+						数据源：视频，速度慢。
+						如上图所示：步态搜索需要提交一小段视频，系统从视频中提取出所有人体，用户选中其中一个人体进行搜索。支持提交多个视频选择人体，但系统按同一人处理。
+						步态搜属非实时搜索，分析过程中展示分析进度与剩余时间，仅分析完成或取消后才可进行新一轮搜索。步态搜顶部支持分析中任务进度显示，方便查看。
+
+					新能力引入
+
+			碰撞： 类型选择可单选也可多选，即可同时选择人机非脸。对应搜索展示结果是多种类型碰撞结果的并集。  -- rerank 避免分数不平滑
+			结构化:特征显示内容采取自适应模式
+			置信度：进行算法调试优化
+			添加到搜索进行渐进搜索
+
+			relID
+
+			搜索目标拆合
+			中的身份研判，会在人口管理的静态库和动态库同时搜索一遍人员信息
+
+			top k 问题
+
+			打分规则
+
+			欧式距离 - score - 拉伸 
+
+			结合算法评测平台的打标能力和指标展示能力，提供查全率、查准率、ROC、AUC指标、响应时间
+
+			gateway : 流控 - 鉴权 - corp-isv - 转发 pod  api注册 黑白名单
+			region
+
+			计费
+			监控
+			多算子
+
+			dispatchengine 引擎 
+			vcs:操作算子/gpu.... 创建服务 - 调用算子抠图 - 开启停止视频分析 ....
+
+			动静人员自动碰撞
+			face_quality 
+
+			同人 
+			标签模块 tag 针对同人打标
+
+			FlowEngine状态机
+
+	负责模块：
+
+
+	技术亮点：
+			
+					分页技术：  public static <RESPONSE> List<RESPONSE> paginate(List<RESPONSE> data, Integer pageNo, Integer countPerPage) {
+			        if (CollectionUtils.isEmpty(data)) {
+			            return data;
+			        }
+			        int fromIndex = Math.min(data.size(), (pageNo - 1) * countPerPage);
+			        int toIndex = Math.min(data.size(), fromIndex + countPerPage);
+
+			        return data.subList(fromIndex, toIndex);
+			    	}
+
+
+
+
+
+	遇到的最深问题：
+			cpu 100% --> 解决和思考
+			性能排查套路： https://www.processon.com/view/5add92b7e4b0518eaccab7d4?fromnew=1
+
+			rerank 
+			searcher文档汇总： 
+			vcs-dataengine 运维手册：
+			多模搜索：多模搜索相关：
+					1."alarmContent": "2020年7月30日在黄浦区外滩街道社区卫生服务中心附近红色上衣走失",
+					   返回命中的线索cluexx 比如时间/地点/特征/坐标
+					2.radius 半径 + 某个点比如大楼  设备+经纬度+地点
+					3.query_embeding :
+							入参：[{"name": "裤子颜色","value": "蓝色","reliability": 1},
+							出参：向量
+					4.text_embeding
+					5.属性映射
+					6.信息抽取服务 将一段话切分为词、实体类型、实体(人名/地址/机构/日期/时间/身份....)、起始结束、desc 、duration 
+
+			=====
+
+
+			基于Gateway实现网关鉴权&分发：https://zhuanlan.zhihu.com/p/165077751
+			阿里巴巴微服务架构演进：https://zhuanlan.zhihu.com/p/91666700
+			Java并发：分布式应用限流 Redis + Lua 实践：https://segmentfault.com/a/1190000016042927
+			布控 =- 美团酒旅实时数据规则引擎应用实践 : https://tech.meituan.com/2018/04/19/hb-rt-operation.html
+					QLExpression学习使用教程：https://blog.csdn.net/YuYunTan/article/details/101436910
+			高性能队列——Disruptor：https://tech.meituan.com/2016/11/18/disruptor.html
+			设计模式在外卖营销业务中的实践：https://tech.meituan.com/2020/03/19/design-pattern-practice-in-marketing.html
+
+			API访问控制：
+			Storm vs. Kafka Streams vs. Spark Streaming vs. Flink ，流式处理哪个更适合你！：https://www.codenong.com/cs106038287/
+
+			qps - tps ...... 指标 是多少呢？？？http://blog.itpub.net/69942496/viewspace-2665766/
+					落库模块：2000TPS/POD  多少路
+					搜索模块：100qps /pod 
+
+
+			战略设计之上下文映射：https://www.jdon.com/ddd/4.html‘
+			线程池运用不当的一次线上事故：https://club.perfma.com/article/646639
+			Mysql知识点：	https://mysql-rtdocs.readthedocs.io/en/latest/
+
+			简单之美：http://shiyanjun.cn/archives/category/algorithm
+			调用上下文传递：https://juejin.cn/post/6844903795571294215
+
+			spring 
+			结合ThreadLocal来看spring事务源码，感受下清泉般的洗涤！ : https://www.cnblogs.com/youzhibing/p/6690341.html
+
+			Doug Lea并发编程文章全部译文	: http://ifeve.com/doug-lea/
+
+
+
+
+
+
+@PropertySource和@ConfigurationProperties区别：https://juejin.cn/post/6844903992544198664
+
+数据延时查看：查看日志的 关注打印的delayed 信息，一般延时控制在10s以内
+
+
+1.kafka在接受数据处的处理逻辑
+	1.通过client api 创建根据写入创建副本数、
+	2.动态实时自动拉起创建 
+
+	3.获取broker列表
+
+2.查看别人提交的代码
+3.将表达式放到db中进行读取，名单
+
+3.idea插件列表
+		1.alibaba java coding guidelines
+		2.arthas idea
+		3.热更新代码 不是插件 = 是重新rebuild 修改的类，等待下面刷出来变了，就说明重新加载成功了，则可以了
+		4.codeGlance
+		5.free mybatis plugin 
+		6.generateAllSetter
+		7.lombok
+		8.maven helper 
+		9.mybatis log
+		10.pojo to Json
+		11.sonarLint
+		12.sequence Diagram
+
+		1、整个技术栈采用了  springboot +  mybatis + QLExpression  
+2、中间件依赖： mysql,redis,向量数据库(adb,ads,holo都可以), kafka
+3、部署依赖于k8s
+4、监控：普罗米修斯、grafna 
+5、打包：maven 
+6、版本管理：Git
+
+模块划分
+common
+repostroy
+datasource
+searcher 
+service 
