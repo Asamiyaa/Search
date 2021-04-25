@@ -1,8 +1,8 @@
-package com.boot.fast;
+package fastPrictice.com.boot.fast;
 
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.assertj.core.util.Lists;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -16,7 +16,6 @@ import java.util.concurrent.*;
  */
 
 public class fast1 /*implements InitializingBean*/ {
-
 
     private LinkedBlockingDeque<Request> batchRequest = new LinkedBlockingDeque<>();
 
@@ -114,6 +113,7 @@ public class fast1 /*implements InitializingBean*/ {
      class OrderRemoteCall{
 
         public  Map<String , Object> queryOrderInfo(String orderNum){
+
             HashMap<String, Object> orderInfo = Maps.newHashMap();
             orderInfo.put("orderNum",orderNum);
             orderInfo.put("orderInfo","orderInfo");

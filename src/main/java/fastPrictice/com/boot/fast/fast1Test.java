@@ -1,4 +1,6 @@
-package com.boot.fast;
+package fastPrictice.com.boot.fast;
+
+import fastPrictice.com.boot.fast.fast1;
 
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
