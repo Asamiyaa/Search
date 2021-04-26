@@ -13,15 +13,55 @@
            
            所以对于自己后面需要     1.加强对设计工具的使用，对应的流程图，表结构，类结构
  
-           依次面试了 
-                aliyun (自己同一层不想看到原来同事，并且面试时自己思路不清晰，对选型这种要求未达到）
-                蚂蚁    面试官问为什么不做甲方？最后一道4l水问题没有回答出来
-                滴滴    挂  
-                美团    ok
-                美团    挂    需要牛客网上直接做题，算法以及边界控制问题都需要思考  <======  自己的问题，以后必须加强这方面练习 
-                京东    聊天
+           依次面试了 --- *** 查看pic/journal/ms/图片内容 回顾当时的不足 ****
+           
+                aliyun  简单       (自己同一层不想看到原来同事，并且面试时自己思路不清晰，对选型这种要求未达到）
+                蚂蚁    简单        面试官问为什么不做甲方？最后一道4l水问题没有回答出来
+                长亮    简单        spring的东西 
+                滴滴    难          挂  
+                美团    较难        ok
+                美团    难          挂    需要牛客网上直接做题，算法以及边界控制问题都需要思考  <======  自己的问题，以后必须加强这方面练习 
+                京东外  聊天
                 银行    聊天
+                光大    难          
+                京东    较难       jsf中间件团队
+                阿里    简单        面试官级别不高，意向不高 ，自己基础不好 redis / ...
+                工行    
+                
+                
+           offer 
+                长亮
+                光大   一门面过后没面
+                美团外  
                 
                 
       总体来说，传统行业的面试难度远远低于互联网，互联网底层涉及的比较多。比如mysql锁、mvvc、锁升级、... 目前来看，自己可以hold住。 但 后续一定要注意  ‘ 年龄 ’ 的问题
+      
+      
+      面试这几天的不足知识点整理：
+           1.Kafka水位(high watermark)与leader epoch的讨论               ：  https://www.cnblogs.com/huxi2b/p/7453543.html
+           2.必须了解的mysql三大日志-binlog、redo log和undo log           ：  https://segmentfault.com/a/1190000023827696
+           3.MySQL崩溃恢复功臣—Redo Log                                  ：  https://cloud.tencent.com/developer/article/1417482
+           4.java锁升级                                                 :   https://segmentfault.com/a/1190000022904663      
+           5.二分查找的次数                                              :   https://blog.csdn.net/xueli1991/article/details/76457778
+           6.单例模式的双重检查                                          :   https://www.jianshu.com/p/45885e50d1c4
+           7.MySQL DELETE 删除语句加锁分析                               :   https://www.fordba.com/lock-analyse-of-delete.html
+           8.kafka消费组和redis消费者区别                                ：  https://www.cnblogs.com/huxi2b/p/6223228.html
+           9.Kafka Consumer多线程实例                                   ：  https://www.cnblogs.com/huxi2b/p/6124937.html
+           10.mysql explain                                            :   https://www.cnblogs.com/xuanzhi201111/p/4175635.html
+           11.MySQL之MVVC原理                                           :  https://blog.csdn.net/huaishu/article/details/89924250
+           12.MySQL锁总结                                               :  https://zhuanlan.zhihu.com/p/29150809
+           13.乐观锁和 MVCC 的区别？                                     :  https://www.zhihu.com/question/27876575
+           14.图解一致性哈希算法                                         ： https://segmentfault.com/a/1190000021199728
+           15.Kafka为什么吞吐量大、速度快？                               : https://zhuanlan.zhihu.com/p/120967989
+           16.kafka分布式的情况下，如何保证消息的顺序?                    :  https://www.zhihu.com/question/266390197
+           17.Linux IO模式及 select、poll、epoll详解                    :   https://segmentfault.com/a/1190000003063859
+           18.Mysql常用日志类型及场景                                    :  https://my.oschina.net/u/4343304/blog/3328033
+           19.MySQL 优化系列（1）-- InnoDB重要参数优化                    :  https://www.cnblogs.com/kevingrace/p/6133818.html
+           20.mySQL数据库间隙锁（mysql是如何解决幻读的）                   :  https://blog.csdn.net/sinat_27143551/article/details/81736330
+           
+           
+           
+           
+      
            
