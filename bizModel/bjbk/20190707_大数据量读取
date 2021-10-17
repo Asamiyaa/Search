@@ -1,7 +1,0 @@
-大数据量 上亿 不能全部读取到内存中 分片如何处理  / 机具联网核查数据读取  /
-
-  RandomAccessFile in = new RandomAccessFile("a.txt");
-  newstaff[i] = new Employee;
-  in.seek(i * recode_size);
-  newstaff[i] = readData();
-  
